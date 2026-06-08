@@ -13,7 +13,7 @@
         .bot-message { align-self: flex-start; background-color: #e9ecef; color: #000; border-bottom-left-radius: 0; }
         .user-message { align-self: flex-end; background-color: #007bff; color: #fff; border-bottom-right-radius: 0; }
         
-        /* मोबाइल फिक्स: सेंड बटन हमेशा नीचे रहेगा */
+        /* मोबाइल फिक्स */
         .input-area { position: fixed; bottom: 0; left: 0; width: 100%; padding: 10px 15px; background-color: #fff; border-top: 1px solid #ccc; display: flex; gap: 10px; box-sizing: border-box; }
         .input-box { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 25px; font-size: 16px; outline: none; }
         .send-btn { background-color: #007bff; color: #fff; border: none; padding: 0 20px; border-radius: 25px; font-size: 16px; cursor: pointer; font-weight: bold; }
@@ -52,9 +52,10 @@
     </div>
 
     <script>
-        const API_KEY = "AQ.Ab8RN6LdoVZ6r97dm7GAu7SMiwknDSryHnWkvmQIxx5-xWA0mw"; 
+        const API_KEY = "AQ.Ab8RN6JUY20DDBZilYTqlhdeVs5wiiAxwe5McIUqkdlHpMTWFg"; 
+        // नया तरीका: चाबी अब लिंक में नहीं जाएगी
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
         
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
         const chatbox = document.getElementById("chatbox");
         const userInput = document.getElementById("userInput");
         const historyList = document.getElementById("historyList");
@@ -72,23 +73,31 @@
             const text = userInput.value.trim();
             if (!text) return;
 
-            // User Message & History
             chatbox.innerHTML += `<div class="message user-message">${text}</div>`;
             userInput.value = "";
             historyList.innerHTML += `<li>${text.substring(0,20)}...</li>`;
             chatbox.scrollTop = chatbox.scrollHeight;
 
-            // API Call
             try {
+                // नया तरीका: चाबी हेडर (Header) के अंदर जाएगी
                 const response = await fetch(API_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": API_KEY 
+                    },
                     body: JSON.stringify({ contents: [{ parts: [{ text: text + " (कृपया हिंदी देवनागरी में जवाब दें)" }] }] })
                 });
-                const data = await response.json();
-                const botReply = data.candidates.content.parts.text;
                 
-                chatbox.innerHTML += `<div class="message bot-message">${botReply} <button class="pin-btn" onclick="pinMessage(this)">📌 Pin</button></div>`;
+                const data = await response.json();
+                
+                // अगर गूगल की तरफ से कोई एरर आता है, तो वह साफ-साफ स्क्रीन पर दिखेगा
+                if (data.error) {
+                    chatbox.innerHTML += `<div class="message bot-message" style="color: red;">एरर: ${data.error.message}</div>`;
+                } else {
+                    const botReply = data.candidates.content.parts.text;
+                    chatbox.innerHTML += `<div class="message bot-message">${botReply} <button class="pin-btn" onclick="pinMessage(this)">📌 Pin</button></div>`;
+                }
             } catch (error) {
                 chatbox.innerHTML += `<div class="message bot-message" style="color: red;">एरर! कृपया इंटरनेट कनेक्शन चेक करें।</div>`;
             }
