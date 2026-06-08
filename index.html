@@ -12,90 +12,56 @@
         .message { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 16px; line-height: 1.4; position: relative; }
         .bot-message { align-self: flex-start; background-color: #e9ecef; color: #000; border-bottom-left-radius: 0; }
         .user-message { align-self: flex-end; background-color: #007bff; color: #fff; border-bottom-right-radius: 0; }
-        
         .input-area { position: fixed; bottom: 0; left: 0; width: 100%; padding: 10px 15px; background-color: #fff; border-top: 1px solid #ccc; display: flex; gap: 10px; box-sizing: border-box; }
         .input-box { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 25px; font-size: 16px; outline: none; }
         .send-btn { background-color: #007bff; color: #fff; border: none; padding: 0 20px; border-radius: 25px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        .pin-btn { font-size: 10px; margin-left: 10px; cursor: pointer; background: #fff; border: 1px solid #ccc; border-radius: 5px; padding: 2px 5px; }
-        
-        .sidebar { position: fixed; top: 0; left: -250px; width: 250px; height: 100%; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: 0.3s; z-index: 100; }
-        .sidebar.open { left: 0; }
-        .sidebar-header { padding: 15px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; font-weight: bold; }
-        .history-list { padding: 10px; list-style: none; margin: 0; overflow-y: auto; height: calc(100% - 60px); }
-        .history-list li { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            इतिहास (History)
-            <button class="icon-btn" onclick="toggleSidebar()">✕</button>
-        </div>
-        <ul class="history-list" id="historyList"></ul>
-    </div>
-
     <div class="header">
-        <button class="icon-btn" onclick="toggleSidebar()">☰</button>
         <div>ChatGPT 3.5</div>
-        <button class="icon-btn" onclick="clearChat()">📝</button>
     </div>
-
     <div class="chat-area" id="chatbox">
         <div class="message bot-message">नमस्ते अविनाश! मैं आपकी कैसे मदद कर सकता हूँ?</div>
     </div>
-
     <div class="input-area">
         <input type="text" id="userInput" class="input-box" placeholder="मैसेज टाइप करें...">
         <button onclick="sendMessage()" class="send-btn">Send</button>
     </div>
 
     <script>
-        // असली चाबी अब पूरी एक साथ है
         const API_KEY = "AQ.Ab8RN6JUY20DDBZilYTqlhdeVs5wiiAxwe5McIUqkdlHpMTWFg"; 
+        // नया फॉर्मेट: चाबी को सीधे हेडर में भेज रहे हैं
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
         
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
-        
-        const chatbox = document.getElementById("chatbox");
-        const userInput = document.getElementById("userInput");
-        const historyList = document.getElementById("historyList");
-
-        function toggleSidebar() { document.getElementById("sidebar").classList.toggle("open"); }
-        function clearChat() { chatbox.innerHTML = '<div class="message bot-message">नमस्ते अविनाश! मैं आपकी कैसे मदद कर सकता हूँ?</div>'; }
-        
-        function pinMessage(btn) {
-            const msg = btn.parentElement;
-            msg.style.backgroundColor = "#fff3cd";
-            btn.textContent = "📌 Pinned";
-        }
-
         async function sendMessage() {
-            const text = userInput.value.trim();
+            const text = document.getElementById("userInput").value.trim();
             if (!text) return;
 
-            chatbox.innerHTML += `<div class="message user-message">${text}</div>`;
-            userInput.value = "";
-            historyList.innerHTML += `<li>${text.substring(0,20)}...</li>`;
-            chatbox.scrollTop = chatbox.scrollHeight;
+            document.getElementById("chatbox").innerHTML += `<div class="message user-message">${text}</div>`;
+            document.getElementById("userInput").value = "";
 
             try {
                 const response = await fetch(API_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": API_KEY 
+                    },
                     body: JSON.stringify({ contents: [{ parts: [{ text: text + " (कृपया हिंदी देवनागरी में जवाब दें)" }] }] })
                 });
                 
                 const data = await response.json();
                 
                 if (data.error) {
-                    chatbox.innerHTML += `<div class="message bot-message" style="color: red;">एरर: ${data.error.message}</div>`;
+                    document.getElementById("chatbox").innerHTML += `<div class="message bot-message" style="color: red;">एरर: ${data.error.message}</div>`;
                 } else {
                     const botReply = data.candidates.content.parts.text;
-                    chatbox.innerHTML += `<div class="message bot-message">${botReply} <button class="pin-btn" onclick="pinMessage(this)">📌 Pin</button></div>`;
+                    document.getElementById("chatbox").innerHTML += `<div class="message bot-message">${botReply}</div>`;
                 }
             } catch (error) {
-                chatbox.innerHTML += `<div class="message bot-message" style="color: red;">एरर! कृपया इंटरनेट कनेक्शन चेक करें।</div>`;
+                document.getElementById("chatbox").innerHTML += `<div class="message bot-message" style="color: red;">नेटवर्क एरर आया है।</div>`;
             }
-            chatbox.scrollTop = chatbox.scrollHeight;
         }
     </script>
 </body>
